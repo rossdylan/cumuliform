@@ -5,9 +5,8 @@ import json
 import time
 import urllib2
 import soundcloud
-import pygst
-pygst.require("0.10")
-import gst
+from subprocess import check_call
+import shlex
 
 
 class CumuliformGatherer(object):
@@ -36,7 +35,10 @@ class CumuliformGatherer(object):
             val = tag.attrs[key]
             if val == None:
                 continue
-            val = urllib2.unquote(val)
+            try:
+                val = urllib2.unquote(val)
+            except:
+                continue
             if "api.soundcloud.com/tracks" in val:
                 val_list = val.split("/")
                 track_index = val_list.index("tracks")
@@ -72,7 +74,8 @@ class CumuliformGatherer(object):
                 return False
             possible_sc = soup.find_all(find_sound_cloud)
             sc_tracks = map(self.getSoundCloudTrack, possible_sc)
-            print sc_tracks
+            for track in sc_tracks:
+                self.queue.put(track)
 
     def handleSpyUpdate(self, response):
         if not response.error:
@@ -80,7 +83,6 @@ class CumuliformGatherer(object):
                 soup = bs4.BeautifulSoup(response.body)
                 script = soup.find_all("script")[-1]
                 song_info = json.loads(script.string)
-                print(song_info)
                 self.client.fetch(
                     song_info['posturl'],
                     self.handleSongURL,
@@ -109,10 +111,7 @@ class CumuliformPlayer(object):
             print(track_str.format(
                 track.title,
                 track.user['username'],
-                track.desc,
+                track.description.split('\n')[0],
                 track.permalink_url))
-            stream_url = self.sc_client.get(track.stream_url, allow_redirects=False)
-            player = gst.element_factory_make("playbin", "player")
-            player.set_property('uri', stream_url)
-
-
+            stream_url = self.sc_client.get(track.stream_url, allow_redirects=False).location
+            check_call(shlex.split("mplayer -msglevel all=-0 -really-quiet {} > /dev/null 2>&1".format(stream_url)))

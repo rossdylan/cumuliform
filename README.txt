@@ -6,8 +6,12 @@ Requires:
 	tornado
 	soundcloud
 	multiprocessing
-	pygst
 	beautifulsoup4
+	mplayer
 
 usage:
 	cumuliform <soundcloud client_id>
+
+Current problems:
+	some times there will be invalid html and it will cause problems
+	mplayer outputs error messages but works just fine

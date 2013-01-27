@@ -1,11 +1,11 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='Cumuliform',
     version='0.1.0',
     author="Ross Delinger",
     author_email="rdelinger@helixoide.com",
-    packages=['Cumuliform'],
+    packages=['cumuliform'],
     license='license.txt',
     description='Listen to the latest sound cloud tracks on hypem spy',
     long_description=open('README.txt').read(),
