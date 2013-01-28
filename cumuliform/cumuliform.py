@@ -7,6 +7,7 @@ import urllib2
 import soundcloud
 from subprocess import check_call
 import shlex
+from pipes import quote
 
 
 class CumuliformGatherer(object):
@@ -58,7 +59,10 @@ class CumuliformGatherer(object):
 
     def handleSongURL(self, response):
         if not response.error:
-            soup = bs4.BeautifulSoup(response.body)
+            try:
+                soup = bs4.BeautifulSoup(response.body)
+            except:
+                return
 
             def find_sound_cloud(tag):
                 for key in tag.attrs:
@@ -74,8 +78,9 @@ class CumuliformGatherer(object):
                 return False
             possible_sc = soup.find_all(find_sound_cloud)
             sc_tracks = map(self.getSoundCloudTrack, possible_sc)
-            for track in sc_tracks:
-                self.queue.put(track)
+            if not self.queue.qsize() > 10:
+                for track in sc_tracks:
+                    self.queue.put(track)
 
     def handleSpyUpdate(self, response):
         if not response.error:
@@ -107,11 +112,17 @@ class CumuliformPlayer(object):
         while True:
             track_id = self.queue.get()
             track = self.sc_client.get("/tracks/{}".format(track_id))
-            track_str = "* {} - {}\n{}\n\t{}"
-            print(track_str.format(
-                track.title,
-                track.user['username'],
-                track.description.split('\n')[0],
-                track.permalink_url))
+            track_str = "* {} - {}\n\t{}\n\t{}\n\tQueue size: {}"
+            try:
+                print(track_str.format(
+                    track.title,
+                    track.user['username'],
+                    track.description.split('\n')[0],
+                    track.permalink_url,
+                    self.queue.qsize()))
+            except:
+                print track
+                print track.__dict__
             stream_url = self.sc_client.get(track.stream_url, allow_redirects=False).location
-            check_call(shlex.split("mplayer -msglevel all=-0 -really-quiet {} > /dev/null 2>&1".format(stream_url)))
+            cmd = shlex.split("mplayer -msglevel all=-0 -really-quiet {} > /dev/null 2>&1".format(quote(stream_url)))
+            check_call(cmd)
